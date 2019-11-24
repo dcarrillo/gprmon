@@ -1,4 +1,4 @@
-# Git pull requests monitor
+# Github pull requests monitor
 
 A WIP **non-production ready** minimal script to monitor github pull requests, when a user is added
 as reviewer of one or more PR on one of more repositories, an icon is shown on the system tray.
