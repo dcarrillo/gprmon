@@ -25,6 +25,9 @@ class GithubRepo(object):
         try:
             logger.info(f'Requesting {url}')
             response = requests.get(url, headers=self.headers, timeout=5)
+            if response.status_code != 200:
+                logger.error(f'Error requesting {url} status code: {response.status_code}')
+
             pull_requests = json.loads(response.text)
 
             while 'next' in response.links:

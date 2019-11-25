@@ -59,16 +59,19 @@ class GithubPrWatcher(object):
                 if pull_requests:
                     for pr in pull_requests:
                         url = f'{self.url}/{self.org}/{repo_name}/pull/{str(pr)}'
+                        logger.info(f'PR found: {url}')
                         items.append(pystray.MenuItem(url, lambda l: self._open_browser(url)))
 
-            if not pull_requests and not self.always_visible:
+            if not items and not self.always_visible:
                 self.icon.visible = False
             else:
                 self.icon.visible = True
                 self._first_time_pause()
 
                 my_dir, _ = path.split(path.realpath(__file__))
-                resource = 'octo16x16r.png' if pull_requests else 'octo16x16.png'
+
+                resource = 'octo16x16r.png' if items else 'octo16x16.png'
+                logger.info(f'Changing icon to {resource}')
                 self.icon.icon = Image.open(path.join(my_dir, f'../resources/{resource}'))
 
             items.append(exit_item)
@@ -77,6 +80,7 @@ class GithubPrWatcher(object):
             sleep(self.interval)
 
     def _open_browser(self, url: str):
+        logger.info(f'Opening {url} using {webbrowser.get().basename}')
         webbrowser.open(url)
 
     def _shutdown(self):
