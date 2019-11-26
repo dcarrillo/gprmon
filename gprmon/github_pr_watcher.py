@@ -1,21 +1,20 @@
 import logging
 import threading
 import webbrowser
-from os import path
 from time import sleep
 from typing import Dict
 
 import pystray
 import requests
-from PIL import Image
 
+from gprmon.icon import Icon
 from gprmon.github_repo import GithubRepo
 
 logger = logging.getLogger('gprmon')
 
 
 class GithubPrWatcher(object):
-    def __init__(self, icon: pystray.Icon, conf: Dict):
+    def __init__(self, icon: Icon, conf: Dict):
         try:
             self.interval = conf['interval']
         except KeyError:
@@ -40,8 +39,9 @@ class GithubPrWatcher(object):
         thread.start()
 
     def run(self):
+        logger.debug('Hiding icon')
         self.icon.visible = False
-        exit_item = pystray.MenuItem("Exit gprmon", lambda l: self._shutdown())
+        exit_item = pystray.MenuItem("Quit", lambda l: self._shutdown())
 
         while True:
             pull_requests = []
@@ -53,8 +53,10 @@ class GithubPrWatcher(object):
                     pull_requests = repo.get_prs_by_reviewer(self.match)
                 except (requests.RequestException, ValueError) as e:
                     logger.error(e)
+                    continue
                 except Exception as e:
-                    logger.error(e)
+                    logger.error(f'Unhandled exception {e}')
+                    continue
 
                 if pull_requests:
                     for pr in pull_requests:
@@ -63,16 +65,18 @@ class GithubPrWatcher(object):
                         items.append(pystray.MenuItem(url, lambda l: self._open_browser(url)))
 
             if not items and not self.always_visible:
+                self.icon.deactivate()
+                logger.debug('Hiding icon')
                 self.icon.visible = False
             else:
+                if items:
+                    self.icon.activate()
+                else:
+                    self.icon.deactivate()
+
+                logger.debug('Showing icon')
                 self.icon.visible = True
                 self._first_time_pause()
-
-                my_dir, _ = path.split(path.realpath(__file__))
-
-                resource = 'octo16x16r.png' if items else 'octo16x16.png'
-                logger.info(f'Changing icon to {resource}')
-                self.icon.icon = Image.open(path.join(my_dir, f'../resources/{resource}'))
 
             items.append(exit_item)
             self.icon.menu = pystray.Menu(*items)

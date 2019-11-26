@@ -1,3 +1,4 @@
 PyGObject~=3.34
 pystray~=0.14
 PyYAML~=5.0
+requests~=2.22

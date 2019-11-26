@@ -18,9 +18,10 @@ Create a file named `gprmon.yml` at the same level of `gprmon.py`, example:
 ```yaml
 ---
 
-# Optional
-interval: 20           # Optional, default 30
-always_visible: false  # Optional, by default icon is only shown when there are PRs pending to review
+# Optional (examples are default values)
+interval: 30           # Interval between checks
+always_visible: false  # By default icon is only shown when there are PRs pending to review
+log_level: INFO
 
 # Mandatory
 token: "<oauth token>" # Mandatory but can be set as environment variable GITHUB_TOKEN

@@ -5,12 +5,10 @@ import sys
 from logging.handlers import RotatingFileHandler
 from os import getenv, path, makedirs
 
-import pystray
 import yaml
-from PIL import Image
 
 from gprmon.github_pr_watcher import GithubPrWatcher
-
+from gprmon.icon import Icon
 
 logger = logging.getLogger('gprmon')
 my_dir, _ = path.split(path.realpath(__file__))
@@ -30,7 +28,7 @@ if __name__ == '__main__':
             conf = yaml.load(config_file, Loader=yaml.SafeLoader)
 
         try:
-            logger.setLevel(conf['log_level'])
+            logger.setLevel(conf['log_level'].upper())
         except KeyError:
             logger.setLevel('INFO')
 
@@ -46,7 +44,6 @@ if __name__ == '__main__':
         logger.error(f'Error reading config file {conf_file}:\nf{e}')
         sys.exit(1)
 
-    icon = pystray.Icon('gprmon')
-    icon.icon = Image.open(f'{my_dir}/resources/octo16x16.png')
+    icon = Icon(lambda l: GithubPrWatcher(icon, conf))
     logger.info('Running systray icon')
-    icon.run(lambda l: GithubPrWatcher(icon, conf))
+    icon.run()
