@@ -35,3 +35,14 @@ class Icon(object):
             logger.debug('Changing icon to inactive')
             self.icon.icon = Image.open(INACTIVE_ICON)
             self.active = False
+
+    def show(self):
+        logging.debug('Showing icon')
+        self.icon.visible = True
+
+    def hide(self):
+        logging.debug('Hiding icon')
+        self.icon.visible = False
+
+    def build_menu(self, menu: pystray.Menu):
+        self.icon.menu = menu

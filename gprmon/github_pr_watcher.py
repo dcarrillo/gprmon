@@ -39,8 +39,7 @@ class GithubPrWatcher(object):
         thread.start()
 
     def run(self):
-        logger.debug('Hiding icon')
-        self.icon.visible = False
+        self.icon.hide()
         exit_item = pystray.MenuItem("Quit", lambda l: self._shutdown())
 
         while True:
@@ -67,7 +66,7 @@ class GithubPrWatcher(object):
             if not items and not self.always_visible:
                 self.icon.deactivate()
                 logger.debug('Hiding icon')
-                self.icon.visible = False
+                self.icon.hide()
             else:
                 if items:
                     self.icon.activate()
@@ -75,11 +74,11 @@ class GithubPrWatcher(object):
                     self.icon.deactivate()
 
                 logger.debug('Showing icon')
-                self.icon.visible = True
+                self.icon.show()
                 self._first_time_pause()
 
             items.append(exit_item)
-            self.icon.menu = pystray.Menu(*items)
+            self.icon.build_menu(pystray.Menu(*items))
 
             sleep(self.interval)
 
