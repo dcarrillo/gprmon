@@ -65,7 +65,6 @@ class GithubPrWatcher(object):
 
             if not items and not self.always_visible:
                 self.icon.deactivate()
-                logger.debug('Hiding icon')
                 self.icon.hide()
             else:
                 if items:
@@ -73,7 +72,6 @@ class GithubPrWatcher(object):
                 else:
                     self.icon.deactivate()
 
-                logger.debug('Showing icon')
                 self.icon.show()
                 self._first_time_pause()
 
