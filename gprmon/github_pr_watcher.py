@@ -60,7 +60,6 @@ class GithubPrWatcher(object):
         self.headers = {'Authorization': f"token {conf['token']}",
                         'Accept': f'application/vnd.github.{API_PATH.split("/")[-1]}+json'}
         self.icon = icon
-        self.first_time = True
         self.acknowledged = set()
 
         thread = threading.Thread(target=self.run, args=())
@@ -69,7 +68,6 @@ class GithubPrWatcher(object):
         thread.start()
 
     def run(self):
-        self.icon.hide()
         exit_item = pystray.MenuItem("Quit", lambda l: self._shutdown())
 
         while True:
@@ -110,9 +108,6 @@ class GithubPrWatcher(object):
             else:
                 self.icon.deactivate()
 
-            self.icon.show()
-            self._first_time_pause()
-
             items += ack_items
             items.append(exit_item)
             self.icon.build_menu(pystray.Menu(*items))
@@ -141,8 +136,3 @@ class GithubPrWatcher(object):
     def _shutdown(self):
         logger.info('Shutting down...')
         self.icon.stop()
-
-    def _first_time_pause(self):
-        if self.first_time:
-            sleep(2)
-            self.first_time = False
