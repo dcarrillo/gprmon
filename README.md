@@ -1,7 +1,8 @@
 # Github pull requests monitor
 
 A WIP **non-production ready** minimal script to monitor github pull requests, when a user is added
-as reviewer of one or more PR on one of more repositories, an icon is shown on the system tray.
+as reviewer of one or more PR on one of more repositories, an icon on the system tray changes its
+color.
 
 ## Configuration
 
@@ -20,8 +21,7 @@ Create a file named `gprmon.yml` at the same level of `gprmon.py`, example:
 
 # Optional (examples are default values)
 interval: 30           # Interval between checks
-always_visible: false  # By default icon is only shown when there are PRs pending to review
-log_level: INFO
+log_level: INFO        # Log level verbosity
 
 # Mandatory
 token: "<oauth token>" # Mandatory but can be set as environment variable GITHUB_TOKEN

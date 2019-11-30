@@ -53,11 +53,6 @@ class GithubPrWatcher(object):
         except KeyError:
             self.interval = 30
 
-        try:
-            self.always_visible = bool(conf['always_visible'])
-        except KeyError:
-            self.always_visible = False
-
         self.org = conf['organization']
         self.url = f"{conf['url']}{API_PATH}"
         self.repos = conf['repos']
@@ -66,6 +61,7 @@ class GithubPrWatcher(object):
                         'Accept': f'application/vnd.github.{API_PATH.split("/")[-1]}+json'}
         self.icon = icon
         self.first_time = True
+        self.acknowledged = set()
 
         thread = threading.Thread(target=self.run, args=())
         thread.daemon = True
@@ -79,6 +75,7 @@ class GithubPrWatcher(object):
         while True:
             pull_requests = []
             items = []
+            ack_items = []
 
             urls = [f'{self.url}/repos/{self.org}/{repo_name}/pulls'
                     for repo_name in self.repos]
@@ -92,20 +89,31 @@ class GithubPrWatcher(object):
 
             for prs in pull_requests:
                 for pr_url in self._get_prs_by_reviewer(prs):
-                    items.append(pystray.MenuItem(pr_url, lambda l: self._open_browser(pr_url)))
-
-            if not items and not self.always_visible:
-                self.icon.deactivate()
-                self.icon.hide()
+                    title = ' '.join(pr_url.split("/")[4:])
+                    if pr_url not in self.acknowledged:
+                        menu_item = pystray.MenuItem(
+                            title,
+                            pystray.Menu(
+                                pystray.MenuItem(
+                                    'Open url',
+                                    lambda l: self._open_browser(pr_url)),
+                                pystray.MenuItem(
+                                    'Acknowledge',
+                                    lambda l: self._add_to_acknowledged(pr_url)
+                                )))
+                        items.append(menu_item)
+                    else:
+                        ack_items.append(pystray.MenuItem(f'{title} ✓',
+                                                          lambda l: self._open_browser(pr_url)))
+            if items:
+                self.icon.activate()
             else:
-                if items:
-                    self.icon.activate()
-                else:
-                    self.icon.deactivate()
+                self.icon.deactivate()
 
-                self.icon.show()
-                self._first_time_pause()
+            self.icon.show()
+            self._first_time_pause()
 
+            items += ack_items
             items.append(exit_item)
             self.icon.build_menu(pystray.Menu(*items))
 
@@ -121,6 +129,10 @@ class GithubPrWatcher(object):
                     matchs.append(pr['html_url'])
 
         return matchs
+
+    def _add_to_acknowledged(self, url):
+        logger.info(f'{url} mark as acknowledged')
+        self.acknowledged.add(url)
 
     def _open_browser(self, url: str):
         logger.info(f'Opening {url} using {webbrowser.get().basename}')
