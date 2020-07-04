@@ -25,10 +25,11 @@ log_level: INFO        # Log level verbosity
 
 # Mandatory
 token: "<oauth token>" # Mandatory but can be set as environment variable GITHUB_TOKEN
-organization: "myorg"
-url: "https://github.mydomain.com"
+organization: "<your org>"
+url: "https://<github url>"
+user: "<user>"
 repos:
   - "repo1"
   - "repo2"
-match: "user_login_name"
+  - "repon"
 ```

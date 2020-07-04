@@ -1,15 +1,11 @@
 import asyncio
 import json
 import logging
-import threading
-import webbrowser
-from time import sleep
-from typing import Dict, List
+from typing import Dict, List, Optional, Set
+
+from PySide2.QtCore import QEventLoop, QObject, QThread, QTimer, Signal
 
 import aiohttp
-import pystray
-
-from gprmon.icon import Icon
 
 logger = logging.getLogger('gprmon')
 
@@ -19,7 +15,7 @@ CONN_TIMEOUT = 5
 MAX_CONNECTIONS = 4
 
 
-async def _fetch_url(session: aiohttp.ClientSession, url: str) -> str:
+async def _fetch_url(session: aiohttp.ClientSession, url: str) -> Optional[str]:
     try:
         logger.info(f'Requesting asynchronously: {url}')
         async with session.get(url, allow_redirects=False) as response:
@@ -32,7 +28,7 @@ async def _fetch_url(session: aiohttp.ClientSession, url: str) -> str:
         raise(e)
 
 
-async def _fetch_all_urls(urls: List, headers: Dict) -> List[str]:
+async def _fetch_all_urls(urls: List['str'], headers: Dict) -> List[str]:
     connector = aiohttp.TCPConnector(limit=MAX_CONNECTIONS)
 
     try:
@@ -43,96 +39,78 @@ async def _fetch_all_urls(urls: List, headers: Dict) -> List[str]:
 
             return text_responses
     except aiohttp.ClientError as e:
-        logger.error(e)
+        raise(e)
 
 
-class GithubPrWatcher(object):
-    def __init__(self, icon: Icon, conf: Dict):
-        try:
-            self.interval = conf['interval']
-        except KeyError:
-            self.interval = 30
+class GPRmonEmitter(QObject):
+    activate = Signal(list)
+    deactivate = Signal()
 
+
+class GithubPrWatcher(QThread):
+    def __init__(self, *args, **kwargs):
+        conf = kwargs['conf']
+        kwargs.pop('conf', None)
+        QThread.__init__(self, *args, **kwargs)
+        self.emitter = GPRmonEmitter()
         self.org = conf['organization']
         self.url = f"{conf['url']}{API_PATH}"
         self.repos = conf['repos']
-        self.match = conf['match']
+        self.user = conf['user']
         self.headers = {'Authorization': f"token {conf['token']}",
                         'Accept': f'application/vnd.github.{API_PATH.split("/")[-1]}+json'}
-        self.icon = icon
-        self.acknowledged = set()
-
-        thread = threading.Thread(target=self.run, args=())
-        thread.daemon = True
-        logger.info('Starting watcher in background')
-        thread.start()
+        self.interval = conf['interval']
+        self.watcher_timer = self._initialize_timer()
 
     def run(self):
-        exit_item = pystray.MenuItem("Quit", lambda l: self._shutdown())
+        self._get_pull_requests()
+        self.watcher_timer.start(self.interval * 1000)
+        loop = QEventLoop()
+        loop.exec_()
 
-        while True:
-            pull_requests = []
-            items = []
-            ack_items = []
+    def _initialize_timer(self):
+        timer = QTimer()
+        timer.moveToThread(self)
+        timer.timeout.connect(self._get_pull_requests)
 
-            urls = [f'{self.url}/repos/{self.org}/{repo_name}/pulls'
-                    for repo_name in self.repos]
+        return timer
 
-            try:
-                pull_requests = [pr for pr in asyncio.run(_fetch_all_urls(urls, self.headers)) if pr]
-            except TypeError:
-                pass
-            except Exception as e:
-                logger.error(f'Unhandled exception: f{e}')
+    def _get_pull_requests(self):
+        pull_requests = List[str]
+        items: Set['str'] = set()
 
-            for prs in pull_requests:
-                for pr_url in self._get_prs_by_reviewer(prs):
-                    title = ' '.join(pr_url.split("/")[4:])
-                    if pr_url not in self.acknowledged:
-                        menu_item = pystray.MenuItem(
-                            title,
-                            pystray.Menu(
-                                pystray.MenuItem(
-                                    'Open url',
-                                    lambda l: self._open_browser(pr_url)),
-                                pystray.MenuItem(
-                                    'Acknowledge',
-                                    lambda l: self._add_to_acknowledged(pr_url)
-                                )))
-                        items.append(menu_item)
-                    else:
-                        ack_items.append(pystray.MenuItem(f'{title} ✓',
-                                                          lambda l: self._open_browser(pr_url)))
-            if items:
-                self.icon.activate()
-            else:
-                self.icon.deactivate()
+        urls = [f'{self.url}/repos/{self.org}/{repo_name}/pulls'
+                for repo_name in self.repos]
 
-            items += ack_items
-            items.append(exit_item)
-            self.icon.build_menu(pystray.Menu(*items))
+        try:
+            pull_requests = [pr for pr in asyncio.run(_fetch_all_urls(urls, self.headers)) if pr]
+        except TypeError:
+            pass
+        except aiohttp.ClientError as e:
+            logger.error(e)
+        except Exception as e:
+            logger.error(f'Unhandled exception: {e}')
 
-            sleep(self.interval)
+        for pr in pull_requests:
+            items.update([pr_url for pr_url in self._get_prs_by_reviewer(pr)])
 
-    def _get_prs_by_reviewer(self, pull_requests: List[str]) -> List[str]:
+        if items:
+            logger.debug('Sending activating signal...')
+            self.emitter.activate.emit(items)
+        else:
+            logger.debug('Sending deactivating signal...')
+            self.emitter.deactivate.emit()
+
+        # self.watcher_timer.stop()
+        # self.exit()
+
+    def _get_prs_by_reviewer(self, pull_requests: List[str]) -> Set[str]:
         matchs = []
 
-        for pr in json.loads(pull_requests):
+        for pr in json.loads(pull_requests):  # type: ignore
             for reviewer in pr['requested_reviewers']:
-                if reviewer['login'] == self.match:
+                if reviewer['login'] == self.user:
                     logger.info(f"{reviewer['login']} has a pending pull request: {pr['html_url']}")
                     matchs.append(pr['html_url'])
 
-        return matchs
-
-    def _add_to_acknowledged(self, url):
-        logger.info(f'{url} mark as acknowledged')
-        self.acknowledged.add(url)
-
-    def _open_browser(self, url: str):
-        logger.info(f'Opening {url} using {webbrowser.get().basename}')
-        webbrowser.open(url)
-
-    def _shutdown(self):
-        logger.info('Shutting down...')
-        self.icon.stop()
+        return set(matchs)
