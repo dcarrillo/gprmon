@@ -3,8 +3,6 @@ import json
 import logging
 from typing import Dict, List, Optional, Set
 
-from PySide2.QtCore import QEventLoop, QObject, QThread, QTimer, Signal
-
 import aiohttp
 
 logger = logging.getLogger('gprmon')
@@ -42,17 +40,8 @@ async def _fetch_all_urls(urls: List['str'], headers: Dict) -> List[str]:
         raise(e)
 
 
-class GPRmonEmitter(QObject):
-    activate = Signal(list)
-    deactivate = Signal()
-
-
-class GithubPrWatcher(QThread):
-    def __init__(self, *args, **kwargs):
-        conf = kwargs['conf']
-        kwargs.pop('conf', None)
-        QThread.__init__(self, *args, **kwargs)
-        self.emitter = GPRmonEmitter()
+class PRChecks():
+    def __init__(self, conf: Dict = dict()):
         self.org = conf['organization']
         self.url = f"{conf['url']}{API_PATH}"
         self.repos = conf['repos']
@@ -60,23 +49,9 @@ class GithubPrWatcher(QThread):
         self.headers = {'Authorization': f"token {conf['token']}",
                         'Accept': f'application/vnd.github.{API_PATH.split("/")[-1]}+json'}
         self.interval = conf['interval']
-        self.watcher_timer = self._initialize_timer()
 
-    def run(self):
-        self._get_pull_requests()
-        self.watcher_timer.start(self.interval * 1000)
-        loop = QEventLoop()
-        loop.exec_()
-
-    def _initialize_timer(self):
-        timer = QTimer()
-        timer.moveToThread(self)
-        timer.timeout.connect(self._get_pull_requests)
-
-        return timer
-
-    def _get_pull_requests(self):
-        pull_requests = List[str]
+    def get_pull_requests(self) -> Set['str']:
+        pull_requests: List[str] = list()
         items: Set['str'] = set()
 
         urls = [f'{self.url}/repos/{self.org}/{repo_name}/pulls'
@@ -94,20 +69,12 @@ class GithubPrWatcher(QThread):
         for pr in pull_requests:
             items.update([pr_url for pr_url in self._get_prs_by_reviewer(pr)])
 
-        if items:
-            logger.debug('Sending activating signal...')
-            self.emitter.activate.emit(items)
-        else:
-            logger.debug('Sending deactivating signal...')
-            self.emitter.deactivate.emit()
+        return items
 
-        # self.watcher_timer.stop()
-        # self.exit()
-
-    def _get_prs_by_reviewer(self, pull_requests: List[str]) -> Set[str]:
+    def _get_prs_by_reviewer(self, pull_requests: str) -> Set[str]:
         matchs = []
 
-        for pr in json.loads(pull_requests):  # type: ignore
+        for pr in json.loads(pull_requests):
             for reviewer in pr['requested_reviewers']:
                 if reviewer['login'] == self.user:
                     logger.info(f"{reviewer['login']} has a pending pull request: {pr['html_url']}")

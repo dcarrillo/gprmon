@@ -10,7 +10,7 @@ color.
 
 Create an oauth [token](https://github.com/settings/tokens) with the following permissions:
 
-- `repo:status`
+- `repo` (Full control of private repositories )
 
 ## Configuration file
 

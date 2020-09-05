@@ -4,50 +4,36 @@ import webbrowser
 from os import path
 from typing import Dict, Set
 
+from GPRMon.github import PRChecks
+
 from PySide2 import QtGui, QtWidgets
 
-from gprmon.github_pr_watcher import GithubPrWatcher
-
-my_dir, _ = path.split(path.realpath(__file__))
-ACTIVE_ICON = path.join(my_dir, '../resources/octo16x16r.png')
-ACK_ICON = path.join(my_dir, '../resources/octo16x16y.png')
-INACTIVE_ICON = path.join(my_dir, '../resources/octo16x16.png')
+BASE_DIR, _ = path.split(path.realpath(__file__))
 
 logger = logging.getLogger('gprmon')
 
 
-class GPRmonTrayIcon(QtWidgets.QSystemTrayIcon):
+class Resources():
+    ACTIVE_ICON = path.join(BASE_DIR, '../resources/octo16x16r.png')
+    ACK_ICON = path.join(BASE_DIR, '../resources/octo16x16y.png')
+    INACTIVE_ICON = path.join(BASE_DIR, '../resources/octo16x16.png')
+
+
+class TrayIcon(QtWidgets.QSystemTrayIcon):
     def __init__(self, parent=None, conf: Dict = dict()):
-        QtWidgets.QSystemTrayIcon.__init__(self, QtGui.QIcon(INACTIVE_ICON), parent)
+        QtWidgets.QSystemTrayIcon.__init__(self, QtGui.QIcon(Resources.INACTIVE_ICON), parent)
         self.menu = QtWidgets.QMenu(parent)
         self.setToolTip('Github Pull Requests MONitor')
         self.conf = conf
-        self.watcher_timer = GithubPrWatcher(None, conf=self.conf)
-        self._start_timer()
         self.ack_items: Set[str] = set()
-        self._update_menu(set())
+        self.update_prs()
 
-    def _start_timer(self):
-        logger.info('Launch GithubPrWatcher')
-        self.watcher_timer.start()
-        self.watcher_timer.emitter.activate.connect(self._on_activate)
-        self.watcher_timer.emitter.deactivate.connect(self._on_deactivate)
+    def update_prs(self) -> None:
+        logger.info('Checking github...')
+        menu_items = PRChecks(self.conf).get_pull_requests()
+        self._update_menu(menu_items=menu_items)
 
-    def _on_activate(self, menu_items: Set['str']):
-        self._update_menu(menu_items)
-        if menu_items == self.ack_items:
-            logger.debug('Changing icon to all ack')
-            QtWidgets.QSystemTrayIcon.setIcon(self, QtGui.QIcon(ACK_ICON))
-        else:
-            logger.debug('Changing icon to active')
-            QtWidgets.QSystemTrayIcon.setIcon(self, QtGui.QIcon(ACTIVE_ICON))
-
-    def _on_deactivate(self):
-        self._update_menu([])
-        logger.debug('Changing icon to inactive')
-        QtWidgets.QSystemTrayIcon.setIcon(self, QtGui.QIcon(INACTIVE_ICON))
-
-    def _update_menu(self, menu_items: Set['str']):
+    def _update_menu(self, menu_items: Set[str]) -> None:
         self.menu.clear()
         self.ack_items = self.ack_items.difference(self.ack_items.difference(menu_items))
         logger.debug(f'Items in ack: {self.ack_items}')
@@ -63,6 +49,7 @@ class GPRmonTrayIcon(QtWidgets.QSystemTrayIcon):
                                          menu_items=menu_items,
                                          item=item:
                                          self._item_acknowledge(menu_items, item))
+                self.setIcon(QtGui.QIcon(Resources.ACTIVE_ICON))
             else:
                 sub_menu = self.menu.addMenu(f'{" ".join(item.split("/")[4:])} ✓')
                 action = sub_menu.addAction('Open')
@@ -75,15 +62,24 @@ class GPRmonTrayIcon(QtWidgets.QSystemTrayIcon):
         exit_item.triggered.connect(self._shutdown)
         self.setContextMenu(self.menu)
 
-    def _open_browser(self, url: str):
+    def _on_activate(self, menu_items: Set['str']) -> None:
+        self._update_menu(menu_items=menu_items)
+        if menu_items == self.ack_items:
+            logger.debug('Changing icon to all ack')
+            self.setIcon(QtGui.QIcon(Resources.ACK_ICON))
+        else:
+            logger.debug('Changing icon to active')
+            self.setIcon(QtGui.QIcon(Resources.ACTIVE_ICON))
+
+    def _open_browser(self, url: str) -> None:
         logger.debug(f'Opening {url} using {webbrowser.get().basename}')
         webbrowser.open(url)
 
-    def _item_acknowledge(self, items: Set['str'], item: str):
+    def _item_acknowledge(self, items: Set['str'], item: str) -> None:
         logger.debug(f'Item {item} marked as acknowledge')
         self.ack_items.add(item)
         self._on_activate(items)
 
-    def _shutdown(self):
+    def _shutdown(self) -> None:
         logger.info('Shutting down...')
         sys.exit()

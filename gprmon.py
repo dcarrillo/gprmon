@@ -5,9 +5,10 @@ import sys
 from logging.handlers import RotatingFileHandler
 from os import getenv, makedirs, path
 
-from PySide2 import QtWidgets
+import GPRMon
 
-from gprmon.tray_icon import GPRmonTrayIcon
+from PySide2 import QtWidgets
+from PySide2.QtCore import QTimer
 
 import yaml
 
@@ -40,19 +41,22 @@ if __name__ == '__main__':
         if getenv('GITHUB_TOKEN'):
             conf['token'] = getenv('GITHUB_TOKEN')
         elif 'token' not in conf:
-            err = 'Gihub token has to be provided'
-            logger.error(err)
-            print(err)
-            sys.exit(1)
+            raise ValueError('Gihub token has to be provided')
 
-    except (IOError, yaml.YAMLError) as e:
-        logger.error(f'Error reading config file {conf_file}:\nf{e}')
+    except (IOError, yaml.YAMLError, ValueError) as e:
+        logger.error(e)
+        print(e)
         sys.exit(1)
 
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
-    tray_icon = GPRmonTrayIcon(widget, conf=conf)
-    tray_icon.show()
+    tray_app = GPRMon.TrayIcon(widget, conf=conf)
+    tray_app.show()
+
+    timer = QTimer(widget)
+    timer.setInterval(conf['interval'] * 1000)
+    timer.timeout.connect(tray_app.update_prs)
+    timer.start()
 
     logger.info('Starting gprmon...')
     sys.exit(app.exec_())
