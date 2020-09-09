@@ -38,6 +38,8 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
         self.ack_items = self.ack_items.difference(self.ack_items.difference(menu_items))
         logger.debug(f'Items in ack: {self.ack_items}')
         logger.debug(f'Items to update: {menu_items}')
+
+        icon = QtGui.QIcon(Resources.INACTIVE_ICON)
         for item in menu_items:
             if item not in self.ack_items:
                 sub_menu = self.menu.addMenu(' '.join(item.split("/")[4:]))
@@ -49,17 +51,20 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
                                          menu_items=menu_items,
                                          item=item:
                                          self._item_acknowledge(menu_items, item))
-                self.setIcon(QtGui.QIcon(Resources.ACTIVE_ICON))
+                icon = QtGui.QIcon(Resources.ACTIVE_ICON)
             else:
                 sub_menu = self.menu.addMenu(f'{" ".join(item.split("/")[4:])} ✓')
                 action = sub_menu.addAction('Open')
                 action.triggered.connect(lambda f=self._open_browser, item=item:
                                          self._open_browser(item))
+                if icon != QtGui.QIcon(Resources.ACTIVE_ICON):
+                    icon = QtGui.QIcon(Resources.ACK_ICON)
 
         self.menu.addSeparator()
 
         exit_item = self.menu.addAction('Exit')
         exit_item.triggered.connect(self._shutdown)
+        self.setIcon(icon)
         self.setContextMenu(self.menu)
 
     def _on_activate(self, menu_items: Set['str']) -> None:
