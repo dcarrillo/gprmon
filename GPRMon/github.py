@@ -54,7 +54,7 @@ class PRChecks():
         pull_requests: List[str] = list()
         items: Set['str'] = set()
 
-        urls = [f'{self.url}/repos/{self.org}/{repo_name}/pulls'
+        urls = [f'{self.url}/repos/{self.org}/{repo_name}/pulls?state=open'
                 for repo_name in self.repos]
 
         try:
