@@ -4,8 +4,10 @@ import logging
 from typing import Dict, List, Optional, Set
 
 import aiohttp
+import uvloop
 
 logger = logging.getLogger('gprmon')
+uvloop.install()
 
 GITHUB_URL = 'https://api.github.com'
 API_PATH = '/api/v3'
