@@ -1,3 +1,6 @@
 logs/
 __pycache__/
 gprmon.yml
+.nox/
+.pytest_cache/
+.mypy_cache/

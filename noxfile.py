@@ -8,7 +8,7 @@ lint_common_args = ['--max-line-length', '120']
 mypy_args = ['--ignore-missing-imports']
 
 
-@nox.session()
+@nox.session(python=['3.7', '3.8'])
 def lint(session):
     args = session.posargs or locations
     session.install('pycodestyle', 'flake8', 'flake8-import-order')
@@ -16,14 +16,14 @@ def lint(session):
     session.run('flake8', *(lint_common_args + args))
 
 
-@nox.session()
+@nox.session(python=['3.7', '3.8'])
 def typing(session):
     args = session.posargs or locations
     session.install('mypy')
     session.run('mypy', *(mypy_args + args))
 
 
-@nox.session()
+@nox.session(python=['3.7', '3.8'])
 def tests(session):
     args = session.posargs
     session.install('pytest')
