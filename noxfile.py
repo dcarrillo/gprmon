@@ -25,6 +25,8 @@ def typing(session):
 
 @nox.session()
 def tests(session):
+    args = session.posargs
     session.install('pytest')
+    session.install('pytest-aiohttp')
     session.install('-r', 'requirements.txt')
-    session.run('pytest')
+    session.run('pytest', *args)

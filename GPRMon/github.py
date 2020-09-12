@@ -4,6 +4,7 @@ import logging
 from typing import Dict, List, Optional, Set
 
 import aiohttp
+
 import uvloop
 
 logger = logging.getLogger('gprmon')
@@ -28,7 +29,7 @@ async def _fetch_url(session: aiohttp.ClientSession, url: str) -> Optional[str]:
         raise(e)
 
 
-async def _fetch_all_urls(urls: List['str'], headers: Dict) -> List[str]:
+async def _fetch_all_urls(urls: List['str'], headers: Dict = None) -> List[str]:
     connector = aiohttp.TCPConnector(limit=MAX_CONNECTIONS)
 
     try:
