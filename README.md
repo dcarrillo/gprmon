@@ -1,14 +1,14 @@
 # Github pull requests monitor
 
-A WIP **non-production ready** minimal script to monitor github pull requests, when a user is added
-as reviewer of one or more PR on one of more repositories, an icon on the system tray changes its
+A WIP **non-production ready** minimal script to monitor Github pull requests. When a user is added
+as a reviewer of one or more PR on one or more repositories, an icon on the system tray changes its
 color.
 
 ## Configuration
 
-### Auth
+### Authentication
 
-Create an oauth [token](https://github.com/settings/tokens) with the following permissions:
+Create an Oauth [token](https://github.com/settings/tokens) with the following permissions:
 
 - `repo` (Full control of private repositories )
 
@@ -22,12 +22,12 @@ Create a file named `gprmon.yml` at the same level of `gprmon.py`, example:
 # Optional (examples are default values)
 interval: 30           # Interval between checks
 log_level: INFO        # Log level verbosity
+url: "https://<github url>" # for github hosted only
 
 # Mandatory
-token: "<oauth token>" # Mandatory but can be set as environment variable GITHUB_TOKEN
-organization: "<your org>"
-url: "https://<github url>"
-user: "<user>"
+organization: "<organization/owner of the repository>"
+token: "<oauth token>" # can be set as environment variable GITHUB_TOKEN
+user: "<user>"         # user to look up among the reviewers
 repos:
   - "repo1"
   - "repo2"

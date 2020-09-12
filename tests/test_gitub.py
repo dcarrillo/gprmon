@@ -19,8 +19,7 @@ def pr_check():
 
 
 def test_get_prs_by_reviewer(pr_check):
-    prs = '''
-    [
+    prs = [
         {
             "url": "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
             "id": 1,
@@ -48,7 +47,6 @@ def test_get_prs_by_reviewer(pr_check):
             ]
         }
     ]
-    '''
 
     matchs = pr_check._get_prs_by_reviewer(prs)
 

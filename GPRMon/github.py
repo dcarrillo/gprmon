@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from typing import Dict, List, Optional, Set
 
@@ -16,29 +15,29 @@ CONN_TIMEOUT = 5
 MAX_CONNECTIONS = 4
 
 
-async def _fetch_url(session: aiohttp.ClientSession, url: str) -> Optional[str]:
+async def _fetch_url(session: aiohttp.ClientSession, url: str) -> Optional[Dict]:
     try:
-        logger.info(f'Requesting asynchronously: {url}')
+        logger.debug(f'Requesting asynchronously: {url}')
         async with session.get(url, allow_redirects=False) as response:
             if response.status != 200:
                 logger.error(f'Error requesting {url} status code: {response.status}')
                 return None
 
-            return await response.text()
+            return await response.json()
     except aiohttp.ClientError as e:
         raise(e)
 
 
-async def _fetch_all_urls(urls: List['str'], headers: Dict = None) -> List[str]:
+async def _fetch_all_urls(urls: List['str'], headers: Dict = None) -> Dict:
     connector = aiohttp.TCPConnector(limit=MAX_CONNECTIONS)
 
     try:
         async with aiohttp.ClientSession(connector=connector,
                                          headers=headers,
                                          conn_timeout=CONN_TIMEOUT) as session:
-            text_responses = await asyncio.gather(*[_fetch_url(session, url) for url in urls])
+            responses = await asyncio.gather(*[_fetch_url(session, url) for url in urls])
 
-            return text_responses
+            return responses
     except aiohttp.ClientError as e:
         raise(e)
 
@@ -46,7 +45,11 @@ async def _fetch_all_urls(urls: List['str'], headers: Dict = None) -> List[str]:
 class PRChecks():
     def __init__(self, conf: Dict = dict()):
         self.org = conf['organization']
-        self.url = f"{conf['url']}{API_PATH}"
+        try:
+            self.url = f"{conf['url']}{API_PATH}"
+        except KeyError:
+            self.url = GITHUB_URL
+
         self.repos = conf['repos']
         self.user = conf['user']
         self.headers = {'Authorization': f"token {conf['token']}",
@@ -54,7 +57,7 @@ class PRChecks():
         self.interval = conf['interval']
 
     def get_pull_requests(self) -> Set['str']:
-        pull_requests: List[str] = list()
+        pull_requests: List[List] = []
         items: Set['str'] = set()
 
         urls = [f'{self.url}/repos/{self.org}/{repo_name}/pulls?state=open'
@@ -74,13 +77,14 @@ class PRChecks():
 
         return items
 
-    def _get_prs_by_reviewer(self, pull_requests: str) -> Set[str]:
-        matchs = []
+    def _get_prs_by_reviewer(self, pull_requests: List) -> Set[str]:
+        matchs: List[str] = []
 
-        for pr in json.loads(pull_requests):
+        for pr in pull_requests:
+            logger.debug(f'Found pull request {pr["html_url"]}')
             for reviewer in pr['requested_reviewers']:
                 if reviewer['login'] == self.user:
-                    logger.info(f"{reviewer['login']} has a pending pull request: {pr['html_url']}")
+                    logger.info(f'{reviewer["login"]} has a pending pull request: {pr["html_url"]}')
                     matchs.append(pr['html_url'])
 
         return set(matchs)
