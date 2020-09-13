@@ -3,7 +3,8 @@
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
-from os import getenv, makedirs, path
+from os import getenv
+from pathlib import Path
 
 import GPRMon
 
@@ -14,18 +15,17 @@ import yaml
 
 
 logger = logging.getLogger('gprmon')
-BASEDIR = path.dirname(__file__)
+BASEDIR = Path(__file__).resolve().parent
 
-if not path.exists(f'{BASEDIR}/logs'):
-    makedirs(f'{BASEDIR}/logs')
+Path(BASEDIR / 'logs').mkdir(exist_ok=True)
 
-handler = RotatingFileHandler(path.join(BASEDIR, 'logs/gprmon.log'), 'a', 1024 * 1024 * 4, 5)
+handler = RotatingFileHandler(BASEDIR / 'logs' / 'gprmon.log', 'a', 1024 * 1024 * 4, 5)
 handler.setFormatter(logging.Formatter('-- %(levelname)s -- %(asctime)s %(message)s'))
 logger.addHandler(handler)
 
 
 if __name__ == '__main__':
-    conf_file = path.join(BASEDIR, 'gprmon.yml')
+    conf_file = BASEDIR / 'gprmon.yml'
 
     try:
         with open(conf_file, 'r') as config_file:

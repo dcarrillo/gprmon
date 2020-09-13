@@ -1,22 +1,22 @@
 import logging
 import sys
 import webbrowser
-from os import path
+from pathlib import Path
 from typing import Dict, Set
 
 from GPRMon.github import PRChecks
 
 from PySide2 import QtGui, QtWidgets
 
-BASE_DIR, _ = path.split(path.realpath(__file__))
+BASEDIR = Path(__file__).resolve().parent
 
 logger = logging.getLogger('gprmon')
 
 
 class Resources():
-    ACTIVE_ICON = path.join(BASE_DIR, '../resources/octo16x16r.png')
-    ACK_ICON = path.join(BASE_DIR, '../resources/octo16x16y.png')
-    INACTIVE_ICON = path.join(BASE_DIR, '../resources/octo16x16.png')
+    ACTIVE_ICON = str(BASEDIR.parent / 'resources/octo16x16r.png')
+    ACK_ICON = str(BASEDIR.parent / 'resources/octo16x16y.png')
+    INACTIVE_ICON = str(BASEDIR.parent / 'resources/octo16x16.png')
 
 
 class TrayIcon(QtWidgets.QSystemTrayIcon):
