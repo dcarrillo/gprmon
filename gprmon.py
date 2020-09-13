@@ -48,7 +48,7 @@ if __name__ == '__main__':
         print(e)
         sys.exit(1)
 
-    app = QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication()
     widget = QtWidgets.QWidget()
     tray_app = GPRMon.TrayIcon(widget, conf=conf)
     tray_app.show()
