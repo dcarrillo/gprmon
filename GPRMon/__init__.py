@@ -1,4 +1,5 @@
 import logging
+import pickle
 import sys
 import webbrowser
 from pathlib import Path
@@ -25,7 +26,7 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
         self.menu = QtWidgets.QMenu(parent)
         self.setToolTip('Github Pull Requests MONitor')
         self.conf = conf
-        self.ack_items: Set[str] = set()
+        self.ack_items: Set[str] = self._load_ack_items()
         self.update_prs()
 
     def update_prs(self) -> None:
@@ -36,6 +37,8 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
     def _update_menu(self, menu_items: Set[str]) -> None:
         self.menu.clear()
         self.ack_items = self.ack_items.difference(self.ack_items.difference(menu_items))
+        self._save_ack_items()
+
         logger.debug(f'Items in ack: {self.ack_items}')
         logger.debug(f'Items to update: {menu_items}')
 
@@ -67,6 +70,17 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
         self.setIcon(icon)
         self.setContextMenu(self.menu)
 
+    def _save_ack_items(self) -> None:
+        logger.debug('Dumping ack items to disk...')
+        Path(BASEDIR.parent / '.ack_items').write_bytes(pickle.dumps(self.ack_items))
+
+    def _load_ack_items(self) -> Set[str]:
+        logger.debug('Loading ack items from disk...')
+        try:
+            return pickle.loads(Path(BASEDIR.parent / '.ack_items').read_bytes())
+        except FileNotFoundError:
+            return set()
+
     def _on_activate(self, menu_items: Set['str']) -> None:
         self._update_menu(menu_items=menu_items)
         if menu_items == self.ack_items:
@@ -86,5 +100,6 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
         self._on_activate(items)
 
     def _shutdown(self) -> None:
+        self._save_ack_items()
         logger.info('Shutting down...')
         sys.exit()
