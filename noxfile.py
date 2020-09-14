@@ -1,4 +1,3 @@
-# noxfile.py
 import nox
 
 nox.options.sessions = ['lint', 'typing', 'tests']
