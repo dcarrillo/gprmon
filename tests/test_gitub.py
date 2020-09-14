@@ -2,20 +2,12 @@ from GPRMon.github import PRChecks
 
 import pytest
 
+from tests import Mocks
+
 
 @pytest.fixture
 def pr_check():
-    conf = {
-        'organization': '',
-        'url': '',
-        'repos': ['octocat'],
-        'user': 'other_user',
-        'headers': {},
-        'interval': '',
-        'token': ''
-    }
-
-    return PRChecks(conf)
+    return PRChecks(Mocks.conf)
 
 
 def test_get_prs_by_reviewer(pr_check):
