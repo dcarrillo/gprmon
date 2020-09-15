@@ -19,6 +19,7 @@ jobs:
 
     - name: Install nox
       run: |
+        sudo apt-get install -y xvfb libxkbcommon-x11-0
         python -m pip install --upgrade pip
         pip install nox
 
@@ -28,4 +29,4 @@ jobs:
 
     - name: Run tests
       run: |
-        nox -s tests
+        xvfb-run nox -s tests
